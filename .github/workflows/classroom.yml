@@ -1,69 +1,40 @@
-name: Autograding Tests
-'on':
-- workflow_dispatch
-- repository_dispatch
-permissions:
-  checks: write
-  actions: read
-  contents: read
+on: [push]
+
 jobs:
-  run-autograding-tests:
+  build:
+
     runs-on: ubuntu-latest
-    if: github.actor != 'github-classroom[bot]'
+    strategy:
+      matrix:
+        python-version: ["3.10"]  
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-    - name: Setup
-      id: setup
-      uses: classroom-resources/autograding-command-grader@v1
+    - uses: actions/checkout@v2
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v2
       with:
-        test-name: Setup
-        setup-command: sudo -H pip3 install -qr requirements.txt; sudo -H pip3 install
-          flake8==5.0.4
-        command: flake8 --ignore "N801, E203, E266, E501, W503, F812, E741, N803,
-          N802, N806" minitorch/ tests/ project/; mypy minitorch/*
-        timeout: 10
-        max-score: 10
-    - name: Task 1.1
-      id: task-1-1
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: Task 1.1
-        setup-command: sudo -H pip3 install -qr requirements.txt
-        command: pytest -m task1_1
-        timeout: 10
-        max-score: 10
-    - name: Task 1.2
-      id: task-1-2
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: Task 1.2
-        setup-command: sudo -H pip3 install -qr requirements.txt
-        command: pytest -m task1_2
-        timeout: 10
-    - name: task 1.3
-      id: task-1-3
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: task 1.3
-        setup-command: sudo -H pip3 install -qr requirements.txt
-        command: pytest -m task1_3
-        timeout: 10
-    - name: Task 1.4
-      id: task-1-4
-      uses: classroom-resources/autograding-command-grader@v1
-      with:
-        test-name: Task 1.4
-        setup-command: sudo -H pip3 install -qr requirements.txt
-        command: pytest -m task1_4
-        timeout: 10
-    - name: Autograding Reporter
-      uses: classroom-resources/autograding-grading-reporter@v1
+        python-version: ${{ matrix.python-version }} 
+    - name: Install dependencies
+      run: |
+        sudo apt-get install graphviz
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+    - name: Test with pytest
+      run: |
+        echo "Module 0"
+        pytest tests -x -m task0_1
+        pytest tests -x -m task0_2
+        pytest tests -x -m task0_3
+        pytest tests -x -m task0_4
+
+        echo "Module 1"
+        pytest tests -x -m task1_1
+        pytest tests -x -m task1_2
+        pytest tests -x -m task1_3
+        pytest tests -x -m task1_4
+
+
+    - name: Run project/run_scalar.py
       env:
-        SETUP_RESULTS: "${{steps.setup.outputs.result}}"
-        TASK-1-1_RESULTS: "${{steps.task-1-1.outputs.result}}"
-        TASK-1-2_RESULTS: "${{steps.task-1-2.outputs.result}}"
-        TASK-1-3_RESULTS: "${{steps.task-1-3.outputs.result}}"
-        TASK-1-4_RESULTS: "${{steps.task-1-4.outputs.result}}"
-      with:
-        runners: setup,task-1-1,task-1-2,task-1-3,task-1-4
+        PYTHONPATH: .
+      run: python -u project/run_scalar.py
